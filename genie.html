@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1120">
+<title>Bijoo Genie — Three Wishes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,450;0,9..144,650;1,9..144,500&family=Karla:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#f6eedd; --ink-dim:rgba(246,238,221,.64);
+  --gold:#eec27a; --gold-bright:#ffdf9e;
+  --jade:#8fd8cb; --rose:#f0a8b8;
+  --stroke:rgba(255,255,255,.13); --stroke-strong:rgba(255,255,255,.24);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Karla',sans-serif;color:var(--ink);
+  background-color:#0b1120;
+  background-image:radial-gradient(1100px 640px at 50% -8%, #1a2440 0%, rgba(26,36,64,0) 62%);
+  min-height:100vh;min-height:100dvh;overflow-x:hidden;touch-action:manipulation;
+}
+::selection{background:rgba(238,194,122,.35)}
+button{font-family:inherit;touch-action:manipulation}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* ---------- backdrop ---------- */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+#fx{position:fixed;inset:0;z-index:90;pointer-events:none}
+.moon{position:fixed;top:max(16px,env(safe-area-inset-top));right:7%;width:54px;height:54px;border-radius:50%;
+  box-shadow:inset -13px 7px 0 0 #e9dcae;opacity:.85;z-index:1;pointer-events:none}
+
+/* ---------- glass ---------- */
+.glass{position:relative;background:rgba(255,255,255,.055);border:1px solid var(--stroke);border-radius:22px;
+  -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+  box-shadow:0 12px 34px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12)}
+.glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(115deg, rgba(255,255,255,0) 34%, rgba(255,255,255,.07) 47%, rgba(255,255,255,0) 60%)}
+
+/* ---------- app frame ---------- */
+#app{position:relative;z-index:10;max-width:470px;margin:0 auto;
+  padding:calc(10px + env(safe-area-inset-top)) 18px 8px;min-height:100dvh;display:flex;flex-direction:column}
+#topbar{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 4px}
+.wordmark{display:flex;align-items:center;gap:8px;font-family:'Fraunces';font-weight:650;font-size:17px;letter-spacing:.02em;color:var(--ink)}
+.wordmark svg{width:21px;height:21px;color:var(--gold)}
+.icon-btn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--ink-dim);cursor:pointer;transition:.2s}
+.icon-btn svg{width:18px;height:18px}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn .off{display:none}
+.icon-btn.muted .on{display:none}
+.icon-btn.muted .off{display:block}
+
+/* ---------- genie stage ---------- */
+#stage{position:relative;height:clamp(215px,32vh,275px);transition:height .5s cubic-bezier(.3,.8,.3,1)}
+#stage.compact{height:clamp(128px,19vh,168px)}
+#genieWrap{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;pointer-events:none}
+#genieSvg{height:100%;width:auto;max-width:80vw;overflow:visible}
+#haLayer{position:absolute;inset:0;pointer-events:none;z-index:6}
+.ha{position:absolute;font-family:'Caveat';font-weight:700;color:var(--gold-bright);font-size:22px;opacity:0;
+  text-shadow:0 2px 12px rgba(0,0,0,.45);animation:haUp 1s ease-out forwards}
+@keyframes haUp{0%{opacity:0;transform:translateY(8px) scale(.7) rotate(-6deg)}22%{opacity:1}100%{opacity:0;transform:translateY(-56px) scale(1.15) rotate(8deg)}}
+#bubble{position:absolute;top:2px;right:0;z-index:7;max-width:64%;padding:10px 15px;border-radius:16px 16px 16px 4px;
+  font-family:'Caveat';font-size:19px;font-weight:600;line-height:1.25;color:var(--ink);
+  opacity:0;transform:translateY(8px) scale(.95);transition:.3s;pointer-events:none}
+#bubble.show{opacity:1;transform:none}
+#stage.compact #bubble{top:-4px;font-size:17px}
+
+/* genie life */
+#genieFloat{transform-box:fill-box;transform-origin:center bottom;animation:bob 3.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+#genieSvg.laughing #genieFloat{animation:laughBounce .55s ease-in-out infinite}
+@keyframes laughBounce{0%,100%{transform:translateY(0) scale(1,1)}30%{transform:translateY(-9px) scale(.97,1.05)}60%{transform:translateY(-2px) scale(1.03,.95)}}
+#eyesOpen{transform-box:fill-box;transform-origin:center;animation:blink 4.6s infinite}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+#eyesHappy,#mouthLaugh{display:none}
+#genieSvg.joyful #eyesOpen,#genieSvg.laughing #eyesOpen{display:none;animation:none}
+#genieSvg.joyful #eyesHappy,#genieSvg.laughing #eyesHappy{display:inline}
+#genieSvg.laughing #mouthSmile{display:none}
+#genieSvg.laughing #mouthLaugh{display:inline}
+#lampGlow{animation:glowPulse 3.6s ease-in-out infinite}
+@keyframes glowPulse{0%,100%{opacity:.5}50%{opacity:.85}}
+#genieSvg.casting #lampGlow{animation:glowBig .5s ease-in-out 3}
+@keyframes glowBig{50%{opacity:1;transform:scale(1.25)}}
+#lamp{transform-box:fill-box;transform-origin:50% 100%}
+#genieSvg.casting #lamp{animation:lampShake .45s ease-in-out 3}
+@keyframes lampShake{0%,100%{transform:rotate(0)}25%{transform:rotate(-3.5deg) translateY(-1px)}75%{transform:rotate(3deg)}}
+
+/* ---------- wish counter ---------- */
+#wishPill{margin:10px auto 16px;width:max-content;display:flex;align-items:center;gap:9px;padding:8px 16px;border-radius:999px}
+.pips{display:flex;gap:4px}
+.pips svg{width:13px;height:13px;fill:none;stroke:var(--gold);stroke-width:1.6;opacity:.38}
+.pips svg.on{fill:var(--gold);stroke:var(--gold);opacity:1;filter:drop-shadow(0 0 5px rgba(238,194,122,.6))}
+.plabel{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--ink-dim)}
+
+/* ---------- content / screens ---------- */
+#content{flex:1}
+.screen{display:none}
+.screen.active{display:block}
+.rise{animation:riseIn .6s cubic-bezier(.22,.9,.3,1) both;animation-delay:calc(var(--i,0)*90ms + 60ms)}
+@keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.sec-label{font-size:11px;letter-spacing:.24em;font-weight:700;color:var(--gold);opacity:.9;margin:2px 2px 10px}
+
+/* menu rows */
+.wish{display:flex;align-items:center;gap:13px;width:100%;text-align:left;padding:14px;margin-bottom:12px;cursor:pointer;
+  color:var(--ink);transition:transform .22s,border-color .3s,background .3s}
+.wish:active{transform:scale(.98)}
+.wish:hover{border-color:rgba(238,194,122,.4)}
+.num{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;
+  font-family:'Caveat';font-size:21px;font-weight:700;color:var(--gold);
+  background:rgba(238,194,122,.12);border:1px solid rgba(238,194,122,.3)}
+.num svg{width:15px;height:15px}
+.wicon{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;
+  color:var(--gold);background:rgba(238,194,122,.1);border:1px solid rgba(238,194,122,.28)}
+.wicon svg{width:23px;height:23px}
+.wtext{display:flex;flex-direction:column;gap:3px;min-width:0}
+.wtext b{font-size:15.5px;font-weight:600;line-height:1.25}
+.wtext small{font-size:12.5px;color:var(--ink-dim)}
+.wstate{margin-left:auto;flex:none;display:grid;place-items:center;color:var(--ink-dim)}
+.wstate>svg{width:18px;height:18px;opacity:.5}
+.okring{width:26px;height:26px;border-radius:50%;background:var(--gold);color:#241a08;display:grid;place-items:center;
+  box-shadow:0 3px 12px rgba(238,194,122,.35)}
+.okring svg{width:13px;height:13px}
+.wish.granted{opacity:.82;border-color:rgba(238,194,122,.35);background:rgba(238,194,122,.05)}
+.menu-foot{text-align:center;font-family:'Caveat';font-size:17.5px;color:var(--ink-dim);margin:16px 0 4px}
+
+/* back + headings */
+.back{display:inline-flex;align-items:center;gap:8px;padding:9px 15px 9px 11px;border-radius:999px;cursor:pointer;
+  background:rgba(255,255,255,.06);border:1px solid var(--stroke);color:var(--ink-dim);font:600 13.5px 'Karla';transition:.2s}
+.back svg{width:16px;height:16px}
+.back:active{transform:scale(.96)}
+.form-head{font-family:'Fraunces';font-size:27px;font-weight:650;margin:2px 0 0}
+.form-sub{font-family:'Caveat';font-size:19.5px;color:var(--gold);margin:2px 0 4px}
+
+/* fields */
+.flabel{display:block;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin:18px 2px 8px}
+.field{display:block;margin-bottom:4px}
+.fwrap{position:relative;display:flex;align-items:center}
+.fwrap input{width:100%;padding:13px 46px 13px 14px;border-radius:15px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.055);color:var(--ink);font:500 15.5px 'Karla';caret-color:var(--gold);transition:border-color .25s;outline:none}
+.fwrap input::placeholder{color:rgba(246,238,221,.35)}
+.fwrap input:focus{border-color:rgba(238,194,122,.55)}
+.fwrap.ok input{border-color:rgba(238,194,122,.5)}
+.tick{position:absolute;right:11px;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#241a08;
+  display:grid;place-items:center;opacity:0;transform:scale(.4);transition:.28s cubic-bezier(.3,1.6,.4,1)}
+.fwrap.ok .tick{opacity:1;transform:scale(1)}
+.tick svg{width:12px;height:12px}
+.ferr{display:none;font-size:12.5px;color:#f29a9a;margin:6px 2px 0}
+.field.err .ferr{display:block}
+.field.err .fwrap input{border-color:rgba(240,140,150,.65);animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+
+/* gold button */
+.btn-gold{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;margin-top:20px;
+  border:none;border-radius:16px;background:var(--gold);color:#241a08;font:700 16px 'Karla';letter-spacing:.02em;cursor:pointer;
+  box-shadow:0 8px 24px rgba(238,194,122,.22), inset 0 1px 0 rgba(255,255,255,.5);transition:.2s}
+.btn-gold:active{transform:scale(.98)}
+.btn-gold:disabled{background:rgba(255,255,255,.07);color:var(--ink-dim);box-shadow:none;border:1px solid var(--stroke);cursor:not-allowed}
+.btn-gold svg{width:17px;height:17px}
+
+/* wedding steps */
+.wstep{display:none}
+.wstep.active{display:block;animation:riseIn .5s cubic-bezier(.22,.9,.3,1) both}
+.vowcard{padding:24px 20px;text-align:center;margin-top:14px}
+.vowmark{width:52px;height:52px;margin:0 auto 10px;border-radius:50%;display:grid;place-items:center;color:var(--gold);
+  background:rgba(238,194,122,.1);border:1px solid rgba(238,194,122,.3)}
+.vowmark svg{width:26px;height:26px}
+.vowtext{font-family:'Fraunces';font-style:italic;font-size:19.5px;line-height:1.6;margin:6px 0 0;color:var(--ink)}
+.vowtext em{font-family:'Caveat';font-style:normal;font-weight:700;font-size:26px;color:var(--gold);padding:0 2px}
+.vowwitness{font-size:12.5px;color:var(--ink-dim);margin-top:12px;letter-spacing:.05em}
+.vowcheck{display:flex;align-items:center;justify-content:center;gap:11px;margin-top:20px;cursor:pointer;font-size:14px;color:var(--ink-dim);transition:.2s}
+.cbox{width:24px;height:24px;border-radius:8px;border:1.5px solid var(--stroke-strong);background:rgba(255,255,255,.05);
+  display:grid;place-items:center;color:#241a08;transition:.2s;flex:none}
+.cbox svg{width:13px;height:13px;opacity:0;transform:scale(.4);transition:.2s}
+.vowcheck.checked .cbox{background:var(--gold);border-color:var(--gold)}
+.vowcheck.checked .cbox svg{opacity:1;transform:scale(1)}
+.vowcheck.checked{color:var(--ink)}
+.linkish{display:block;margin:14px auto 0;background:none;border:none;color:var(--ink-dim);font:600 13px 'Karla';cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* baby form */
+.chips{display:flex;gap:12px}
+.chip{flex:1;display:flex;align-items:center;gap:10px;padding:13px 13px;border-radius:16px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid var(--stroke);color:var(--ink);font:600 14.5px 'Karla';transition:.25s}
+.chip .gico{width:27px;height:27px;color:var(--gold);flex:none}
+.chip .ctick{margin-left:auto;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#241a08;
+  display:grid;place-items:center;opacity:0;transform:scale(.4);transition:.25s cubic-bezier(.3,1.6,.4,1);flex:none}
+.chip .ctick svg{width:12px;height:12px}
+.chip.sel{border-color:rgba(238,194,122,.65);background:rgba(238,194,122,.1)}
+.chip.sel .ctick{opacity:1;transform:scale(1)}
+.stepper{display:flex;align-items:center;gap:4px;width:max-content;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.05);border-radius:16px;padding:5px}
+.stepbtn{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--stroke);
+  color:var(--ink);display:grid;place-items:center;cursor:pointer;transition:.2s}
+.stepbtn svg{width:16px;height:16px}
+.stepbtn:active{transform:scale(.92)}
+.stepbtn:disabled{opacity:.32}
+#bCount{min-width:46px;text-align:center;font-family:'Fraunces';font-size:21px;font-weight:650}
+.stephint{font-size:12px;color:var(--ink-dim);margin:8px 2px 0}
+
+/* loading */
+.loadwrap{text-align:center;padding-top:10px}
+#heartSvg{overflow:visible}
+#liquidWave{animation:drift 1.5s linear infinite}
+@keyframes drift{to{transform:translateX(-60px)}}
+#liquidWave2{animation:drift2 2.1s linear infinite}
+@keyframes drift2{from{transform:translateX(-60px)}to{transform:translateX(0)}}
+#orbit{transform-box:view-box;transform-origin:50% 50%;animation:spin 4.5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#pct{font-family:'Fraunces';font-size:32px;font-weight:650;color:var(--gold);margin-top:6px}
+#loadStatus{font-family:'Caveat';font-size:20px;color:var(--ink);margin-top:2px}
+#loadSummary{font-size:12.5px;color:var(--ink-dim);margin-top:10px;letter-spacing:.04em}
+
+/* result */
+.res-card{padding:18px 16px 20px;text-align:center}
+.res-tag{display:block;font-size:10.5px;letter-spacing:.24em;font-weight:700;color:var(--gold);margin-bottom:14px}
+.polaroid{width:min(300px,88%);margin:0 auto;background:#fbf6ea;border-radius:6px;padding:10px 10px 12px;
+  transform:rotate(-2deg);box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.ph-wrap{aspect-ratio:4/3;overflow:hidden;border-radius:4px;background:linear-gradient(100deg,#e6ddc6 40%,#f5eedc 50%,#e6ddc6 60%);
+  background-size:220% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{to{background-position:-120% 0}}
+.ph-wrap.failed{background:#e6ddc6;animation:none}
+.ph-wrap img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transform:scale(1.05);transition:.7s}
+.ph-wrap img.loaded{opacity:1;transform:none}
+.ph-wrap.failed img{display:none}
+.res-msg{font-family:'Caveat';font-weight:700;font-size:21.5px;line-height:1.25;color:#3f2f18;margin:10px 2px 0}
+.res-msg em{font-style:normal;color:#9a6a1d}
+.res-sub{font-size:13px;color:var(--ink-dim);margin:14px 6px 0;line-height:1.5}
+.divider{display:flex;align-items:center;gap:10px;color:var(--gold);margin:16px 8px 4px}
+.divider::before,.divider::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(238,194,122,.45))}
+.divider::after{background:linear-gradient(90deg,rgba(238,194,122,.45),transparent)}
+.divider svg{width:12px;height:12px;flex:none}
+.res-pill{display:inline-flex;align-items:center;gap:9px;margin-top:12px;padding:9px 16px;border-radius:999px;
+  border:1px solid var(--stroke);background:rgba(255,255,255,.05);font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--ink-dim)}
+
+/* wish-granted stamp */
+#stamp{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;z-index:80;opacity:0;transition:opacity .3s}
+#stamp.show{opacity:1}
+#stamp .inner{display:flex;align-items:center;gap:14px;font-family:'Fraunces';font-style:italic;font-weight:650;
+  font-size:clamp(34px,9vw,54px);color:var(--gold-bright);text-shadow:0 6px 34px rgba(238,194,122,.4);padding:0 20px;text-align:center}
+#stamp .spspark{width:clamp(20px,5vw,30px);height:auto;color:var(--gold)}
+#stamp.show .spspark{animation:sparkPop .6s cubic-bezier(.2,1.5,.4,1) both}
+#stamp.show .spspark.d{animation-delay:.12s}
+#stamp.show .inner>span{animation:stampIn .55s cubic-bezier(.2,1.3,.3,1) both}
+@keyframes stampIn{from{transform:scale(.5) rotate(-5deg);filter:blur(10px);opacity:0}to{transform:scale(1) rotate(-2deg);filter:blur(0);opacity:1}}
+@keyframes sparkPop{from{transform:scale(0) rotate(-40deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+
+#foot{text-align:center;font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:rgba(246,238,221,.38);
+  padding:16px 0 calc(14px + env(safe-area-inset-bottom))}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="moon" aria-hidden="true"></div>
+
+<div id="app">
+  <header id="topbar">
+    <div class="wordmark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.5 15.5q-2.4-.9-3.1-3.4l1.5-.7q.9 2.2 3 3"/>
+        <path d="M6.8 15.8q0-3.8 5.2-3.8t5.2 3.8q0 2.6-5.2 2.6t-5.2-2.6Z"/>
+        <path d="M12 11v-1.5"/><circle cx="12" cy="8.1" r="1.1"/>
+      </svg>
+      Bijoo Genie
+    </div>
+    <button id="soundBtn" class="icon-btn glass" aria-label="Toggle sound">
+      <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.4L12 19V5L7.4 9.5H4Z"/><path d="M15.4 9.2a4 4 0 0 1 0 5.6"/><path d="M17.8 6.8a7.4 7.4 0 0 1 0 10.4"/></svg>
+      <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.4L12 19V5L7.4 9.5H4Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+    </button>
+  </header>
+
+  <div id="stage">
+    <div id="bubble" class="glass"><span id="bubbleText"></span></div>
+    <div id="genieWrap">
+      <svg id="genieSvg" viewBox="40 4 180 262" aria-hidden="true">
+        <defs>
+          <linearGradient id="gJade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe0d3"/><stop offset="1" stop-color="#47998b"/></linearGradient>
+          <linearGradient id="gBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6d68f"/><stop offset="1" stop-color="#a9742a"/></linearGradient>
+          <linearGradient id="gTurban" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5d391"/><stop offset="1" stop-color="#d5a044"/></linearGradient>
+          <radialGradient id="gGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd98a" stop-opacity=".5"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>
+        </defs>
+        <ellipse id="lampGlow" cx="130" cy="246" rx="92" ry="30" fill="url(#gGlow)"/>
+        <g id="genieFloat">
+          <path d="M130 194 C 108 206 102 224 122 227 C 142 230 138 242 131 248" fill="none" stroke="url(#gJade)" stroke-width="15" stroke-linecap="round"/>
+          <path d="M130 194 C 108 206 102 224 122 227 C 142 230 138 242 131 248" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="4" stroke-linecap="round"/>
+          <path d="M130 92 C 158 92 170 122 168 150 C 166 178 152 196 130 196 C 108 196 94 178 92 150 C 90 122 102 92 130 92 Z" fill="url(#gJade)"/>
+          <path d="M111 106 C 103 120 99 141 101 161" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="5" stroke-linecap="round"/>
+          <path d="M101 147 Q 130 167 159 147" fill="none" stroke="#57b3a3" stroke-width="15" stroke-linecap="round"/>
+          <path d="M104 163 Q 130 179 156 163" fill="none" stroke="#79cfc0" stroke-width="13" stroke-linecap="round"/>
+          <circle cx="97" cy="68" r="5.5" fill="url(#gJade)"/><circle cx="163" cy="68" r="5.5" fill="url(#gJade)"/>
+          <circle cx="96" cy="72" r="2.1" fill="#eec27a"/><circle cx="164" cy="72" r="2.1" fill="#eec27a"/>
+          <circle cx="130" cy="64" r="33" fill="url(#gJade)"/>
+          <ellipse cx="108" cy="74" rx="6" ry="3.6" fill="#f0a8b8" opacity=".5"/>
+          <ellipse cx="152" cy="74" rx="6" ry="3.6" fill="#f0a8b8" opacity=".5"/>
+          <g id="eyesOpen">
+            <circle cx="117" cy="62" r="4.2" fill="#14333a"/><circle cx="143" cy="62" r="4.2" fill="#14333a"/>
+            <circle cx="118.5" cy="60.5" r="1.4" fill="#fff"/><circle cx="144.5" cy="60.5" r="1.4" fill="#fff"/>
+          </g>
+          <g id="eyesHappy">
+            <path d="M110 63 Q117 55 124 63" fill="none" stroke="#14333a" stroke-width="3.4" stroke-linecap="round"/>
+            <path d="M136 63 Q143 55 150 63" fill="none" stroke="#14333a" stroke-width="3.4" stroke-linecap="round"/>
+          </g>
+          <path d="M110 52.5 Q117 49.5 123 51.5" fill="none" stroke="#14333a" stroke-width="2.3" stroke-linecap="round" opacity=".85"/>
+          <path d="M137 51.5 Q143 49.5 150 52.5" fill="none" stroke="#14333a" stroke-width="2.3" stroke-linecap="round" opacity=".85"/>
+          <path id="mouthSmile" d="M121 76 Q130 84.5 139 76" fill="none" stroke="#14333a" stroke-width="3" stroke-linecap="round"/>
+          <g id="mouthLaugh">
+            <path d="M117.5 73.5 Q130 97 142.5 73.5 Q130 80 117.5 73.5 Z" fill="#14333a"/>
+            <ellipse cx="130" cy="84" rx="5.6" ry="3" fill="#e58a8a"/>
+          </g>
+          <ellipse cx="130" cy="37" rx="36" ry="16.5" fill="url(#gTurban)"/>
+          <path d="M97 35 Q130 23 163 35" fill="none" stroke="rgba(122,82,20,.5)" stroke-width="2"/>
+          <path d="M95 43 Q130 29 165 43" fill="none" stroke="rgba(122,82,20,.45)" stroke-width="2"/>
+          <circle cx="130" cy="21.5" r="4.6" fill="#eec27a"/>
+          <path d="M130 16.4l3.1 5.1-3.1 5.1-3.1-5.1Z" fill="#e05f7a"/>
+          <path d="M158 29 q9 -13 14 -3 q-7 1.5 -11 7 Z" fill="#f0a8b8" opacity=".9"/>
+        </g>
+        <g id="lamp">
+          <path d="M97 237 Q 65 233 56 210 L 65 205 Q 75 227 103 230 Z" fill="url(#gBrass)"/>
+          <ellipse cx="59.5" cy="207.5" rx="5.4" ry="3.6" fill="#8a5c20" transform="rotate(-32 59.5 207.5)"/>
+          <path d="M92 247 Q 95 220 130 218 Q 165 220 168 247 Z" fill="url(#gBrass)"/>
+          <path d="M112 233 Q 130 222 148 233" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M116 217 Q 130 203 144 217 Z" fill="url(#gBrass)"/>
+          <circle cx="130" cy="204.5" r="3.8" fill="#eec27a"/>
+          <path d="M167 236 q18 -1 16.5 12 q-1.6 12 -19 10" fill="none" stroke="url(#gBrass)" stroke-width="6.5" stroke-linecap="round"/>
+          <ellipse cx="130" cy="249.5" rx="45" ry="6.5" fill="#8a5c20"/>
+          <ellipse cx="130" cy="255.5" rx="54" ry="6" fill="rgba(0,0,0,.32)"/>
+        </g>
+      </svg>
+    </div>
+    <div id="haLayer"></div>
+  </div>
+
+  <div id="wishPill" class="glass">
+    <span class="pips" data-wishpips></span>
+    <span class="plabel" data-wishlabel></span>
+  </div>
+
+  <main id="content">
+
+    <!-- ============ MENU ============ -->
+    <section id="sec-menu" class="screen active">
+      <div class="sec-label rise" style="--i:0">YOUR THREE WISHES</div>
+
+      <button class="wish glass rise" data-wish="birthday" style="--i:1">
+        <span class="num">1</span>
+        <span class="wicon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 21v-6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6"/><path d="M3 21h18"/>
+            <path d="M8 13v-2.2"/><path d="M12 13V9.2"/><path d="M16 13v-2.2"/>
+            <circle cx="8" cy="8.4" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="6.9" r=".9" fill="currentColor" stroke="none"/><circle cx="16" cy="8.4" r=".9" fill="currentColor" stroke="none"/>
+          </svg>
+        </span>
+        <span class="wtext"><b>Celebrate a birthday with Bijoo</b><small class="wsub">Cake, candles and a wish of your own</small></span>
+        <span class="wstate"></span>
+      </button>
+
+      <button class="wish glass rise" data-wish="wedding" style="--i:2">
+        <span class="num">2</span>
+        <span class="wicon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9.3" cy="15" r="5"/><circle cx="14.7" cy="15" r="5"/><path d="M12 3.6l2 2-2 2-2-2Z"/>
+          </svg>
+        </span>
+        <span class="wtext"><b>Marry Bijoo</b><small class="wsub">A vow written in the stars</small></span>
+        <span class="wstate"></span>
+      </button>
+
+      <button class="wish glass rise" data-wish="baby" style="--i:3">
+        <span class="num">3</span>
+        <span class="wicon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 11.5a7.5 7.5 0 0 1 15 0"/>
+            <path d="M3.5 11.5h17l-.5 2a7.2 7.2 0 0 1-7 5.5h-2a7.2 7.2 0 0 1-7-5.5Z"/>
+            <circle cx="8.6" cy="20.6" r="1.2"/><circle cx="15.4" cy="20.6" r="1.2"/><path d="M20.5 11.5l1.7-3.2"/>
+          </svg>
+        </span>
+        <span class="wtext"><b>A baby with Bijoo</b><small class="wsub">Choose, name and start loving</small></span>
+        <span class="wstate"></span>
+      </button>
+
+      <p class="menu-foot rise" id="menuFoot" style="--i:4">Only three wishes. Bijoo counts every one.</p>
+    </section>
+
+    <!-- ============ WEDDING ============ -->
+    <section id="sec-wedding" class="screen">
+      <button class="back" data-back>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        All wishes
+      </button>
+
+      <div class="wstep active" id="wstep1">
+        <h2 class="form-head rise" style="--i:0">The Marriage Registry</h2>
+        <p class="form-sub rise" style="--i:1">Wish two — fill it with care</p>
+        <label class="field rise" style="--i:2">
+          <span class="flabel">Your name</span>
+          <span class="fwrap"><input id="wName" type="text" placeholder="e.g. Aisha" maxlength="30" autocomplete="off">
+            <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg></span>
+          </span>
+          <small class="ferr">Please fill this in</small>
+        </label>
+        <label class="field rise" style="--i:3">
+          <span class="flabel">Boyfriend's name</span>
+          <span class="fwrap"><input id="wBf" type="text" placeholder="e.g. Bijoo's favourite" maxlength="30" autocomplete="off">
+            <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg></span>
+          </span>
+          <small class="ferr">Please fill this in</small>
+        </label>
+        <label class="field rise" style="--i:4">
+          <span class="flabel">Marriage place</span>
+          <span class="fwrap"><input id="wPlace" type="text" placeholder="e.g. Under the crescent moon" maxlength="40" autocomplete="off">
+            <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg></span>
+          </span>
+          <small class="ferr">Please fill this in</small>
+        </label>
+        <button id="toVow" class="btn-gold rise" style="--i:5" disabled>Make my vow</button>
+      </div>
+
+      <div class="wstep" id="wstep2">
+        <h2 class="form-head">The Vow</h2>
+        <p class="form-sub">Say it like you mean it</p>
+        <div class="vowcard glass">
+          <div class="vowmark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9.3" cy="15" r="5"/><circle cx="14.7" cy="15" r="5"/><path d="M12 3.6l2 2-2 2-2-2Z"/>
+            </svg>
+          </div>
+          <p class="vowtext">&ldquo;I promise to stay with my <em id="vowBf"></em>, for eternity and love him always.&rdquo;</p>
+          <p class="vowwitness" id="vowWitness"></p>
+          <div class="vowcheck" id="vowCheck" role="checkbox" aria-checked="false" tabindex="0">
+            <span class="cbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg></span>
+            I make this vow with all my heart
+          </div>
+        </div>
+        <button id="sealBtn" class="btn-gold" disabled>
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20.5C5.5 15.5 3 12 4.6 8.6 5.8 6 9 5.3 12 8.6c3-3.3 6.2-2.6 7.4 0 1.6 3.4-.9 6.9-7.4 11.9Z"/></svg>
+          Seal the vow
+        </button>
+        <button class="linkish" id="editBtn">edit details</button>
+      </div>
+    </section>
+
+    <!-- ============ BABY FORM ============ -->
+    <section id="sec-baby" class="screen">
+      <button class="back" data-back>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        All wishes
+      </button>
+      <h2 class="form-head rise" style="--i:0">A Little One</h2>
+      <p class="form-sub rise" style="--i:1">Wish three — tell Bijoo everything</p>
+
+      <span class="flabel rise" style="--i:2">Baby gender</span>
+      <div class="chips rise" style="--i:2">
+        <button class="chip" data-g="girl">
+          <svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="14" r="6.2"/><circle cx="6.4" cy="5.4" r="1.9"/><circle cx="11.8" cy="3.7" r="1.9"/><circle cx="9" cy="5.2" r=".9" fill="currentColor" stroke="none"/>
+            <circle cx="10" cy="13.6" r=".7" fill="currentColor" stroke="none"/><circle cx="14" cy="13.6" r=".7" fill="currentColor" stroke="none"/><path d="M10.6 16.4q1.4 1.1 2.8 0"/>
+          </svg>
+          Baby girl
+          <span class="ctick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg></span>
+        </button>
+        <button class="chip" data-g="boy">
+          <svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="14" r="6.2"/><path d="M6.2 11a6.2 6.2 0 0 1 11.6 0"/><path d="M5.2 11h13.6"/>
+            <circle cx="10" cy="13.6" r=".7" fill="currentColor" stroke="none"/><circle cx="14" cy="13.6" r=".7" fill="currentColor" stroke="none"/><path d="M10.6 16.4q1.4 1.1 2.8 0"/>
+          </svg>
+          Baby boy
+          <span class="ctick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg></span>
+        </button>
+      </div>
+
+      <label class="field rise" style="--i:3">
+        <span class="flabel">Baby name</span>
+        <span class="fwrap"><input id="bName" type="text" placeholder="A name as sweet as Bijoo" maxlength="30" autocomplete="off">
+          <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg></span>
+        </span>
+        <small class="ferr">Please fill this in</small>
+      </label>
+
+      <span class="flabel rise" style="--i:4">How many babies?</span>
+      <div class="stepper rise" style="--i:4">
+        <button class="stepbtn" id="bMinus" aria-label="Fewer babies">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></svg>
+        </button>
+        <span id="bCount">1</span>
+        <button class="stepbtn" id="bPlus" aria-label="More babies">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>
+        </button>
+      </div>
+      <p class="stephint rise" style="--i:4">Between 1 and 5 little stars</p>
+
+      <button id="loveBtn" class="btn-gold rise" style="--i:5" disabled>
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20.5C5.5 15.5 3 12 4.6 8.6 5.8 6 9 5.3 12 8.6c3-3.3 6.2-2.6 7.4 0 1.6 3.4-.9 6.9-7.4 11.9Z"/></svg>
+        Start loving
+      </button>
+    </section>
+
+    <!-- ============ BABY LOADING ============ -->
+    <section id="sec-baby-loading" class="screen">
+      <div class="loadwrap">
+        <svg id="heartSvg" viewBox="0 0 120 112" width="152" aria-hidden="true">
+          <defs>
+            <clipPath id="hclip"><path d="M60 100 C 22 74 8 48 21 31 C 31 18 50 20 60 34 C 70 20 89 18 99 31 C 112 48 98 74 60 100 Z"/></clipPath>
+          </defs>
+          <path d="M60 100 C 22 74 8 48 21 31 C 31 18 50 20 60 34 C 70 20 89 18 99 31 C 112 48 98 74 60 100 Z" fill="rgba(255,255,255,.05)" stroke="#eec27a" stroke-width="2.5"/>
+          <g clip-path="url(#hclip)">
+            <g id="liquid" transform="translate(0 78)">
+              <path id="liquidWave2" d="M-80 36 Q -65 27 -50 36 T -20 36 T 10 36 T 40 36 T 70 36 T 100 36 T 130 36 T 160 36 T 190 36 T 220 36 L 220 150 L -80 150 Z" fill="rgba(240,168,184,.45)"/>
+              <path id="liquidWave" d="M-80 30 Q -65 21 -50 30 T -20 30 T 10 30 T 40 30 T 70 30 T 100 30 T 130 30 T 160 30 T 190 30 T 220 30 L 220 150 L -80 150 Z" fill="#f0a8b8"/>
+            </g>
+          </g>
+          <g id="orbit" fill="#eec27a">
+            <circle cx="60" cy="3" r="2.2"/><circle cx="108" cy="56" r="2.2"/><circle cx="12" cy="56" r="2.2"/>
+            <path d="M60 8l1.4 3.2 3.2 1.4-3.2 1.4L60 17.2l-1.4-3.2-3.2-1.4 3.2-1.4Z" opacity=".9"/>
+          </g>
+        </svg>
+        <div id="pct">0%</div>
+        <div id="loadStatus">Gathering stardust…</div>
+        <div id="loadSummary"></div>
+      </div>
+    </section>
+
+    <!-- ============ RESULT ============ -->
+    <section id="sec-result" class="screen">
+      <button class="back" data-back>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        Back to wishes
+      </button>
+      <div class="res-card glass rise" style="--i:1">
+        <span class="res-tag" id="resTag"></span>
+        <figure class="polaroid" style="margin:0 auto">
+          <div class="ph-wrap"><img id="resImg" alt="A memory with Bijoo"></div>
+          <figcaption class="res-msg" id="resMsg"></figcaption>
+        </figure>
+        <p class="res-sub" id="resSub"></p>
+        <div class="divider">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.6 6.9 6.9 2.6-6.9 2.6L12 21.5l-2.6-6.9-6.9-2.6 6.9-2.6Z"/></svg>
+        </div>
+        <div class="res-pill">
+          <span class="pips" data-wishpips></span>
+          <span data-wishlabel></span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer id="foot">Three wishes &middot; no more &middot; no less</footer>
+</div>
+
+<div id="stamp" aria-hidden="true">
+  <div class="inner">
+    <svg class="spspark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.6 6.9 6.9 2.6-6.9 2.6L12 21.5l-2.6-6.9-6.9-2.6 6.9-2.6Z"/></svg>
+    <span>Wish granted!</span>
+    <svg class="spspark d" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.6 6.9 6.9 2.6-6.9 2.6L12 21.5l-2.6-6.9-6.9-2.6 6.9-2.6Z"/></svg>
+  </div>
+</div>
+
+<canvas id="fx"></canvas>
+
+<script>
+'use strict';
+/* ================= helpers & state ================= */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+
+const KEY = 'bijoo-genie-state-v1';
+function loadState(){
+  try{ const r = JSON.parse(localStorage.getItem(KEY)); if(r && r.granted) return r; }catch(e){}
+  return { granted:{ birthday:false, wedding:false, baby:false }, data:{} };
+}
+const S = loadState();
+const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} };
+const grantedCount = () => ['birthday','wedding','baby'].filter(k => S.granted[k]).length;
+
+const ICON = {
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.5"/></svg>',
+  chev :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5.5l6.5 6.5L9 18.5"/></svg>'
+};
+const META = {
+  birthday:{ n:'1', tag:'WISH ONE',   mem:'Tap to revisit this memory' },
+  wedding :{ n:'2', tag:'WISH TWO',   mem:'Tap to revisit your vow' },
+  baby    :{ n:'3', tag:'WISH THREE', mem:'Tap to revisit the nursery' }
+};
+const PHOTOS = {
+  birthday:'m1.jpeg',
+  wedding :'m2.jpeg',
+  baby    :'m33.jpeg'
+};
+
+/* ================= audio (tiny chime, no assets) ================= */
+let AC = null, muted = localStorage.getItem('bijoo-muted') === '1';
+function ensureAudio(){
+  if(!AC){ try{ AC = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
+  if(AC && AC.state === 'suspended') AC.resume();
+}
+function playChime(){
+  if(muted || !AC) return;
+  const t = AC.currentTime;
+  [[784,0],[1046.5,.09],[1318.5,.18],[2093,.3]].forEach(([f,dt])=>{
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(.0001, t+dt);
+    g.gain.exponentialRampToValueAtTime(dt < .2 ? .07 : .03, t+dt+.02);
+    g.gain.exponentialRampToValueAtTime(.0001, t+dt+1);
+    o.connect(g); g.connect(AC.destination); o.start(t+dt); o.stop(t+dt+1.1);
+  });
+}
+const soundBtn = $('#soundBtn');
+soundBtn.classList.toggle('muted', muted);
+soundBtn.addEventListener('click', () => {
+  muted = !muted;
+  localStorage.setItem('bijoo-muted', muted ? '1' : '0');
+  soundBtn.classList.toggle('muted', muted);
+  if(!muted){ ensureAudio(); playChime(); }
+});
+document.addEventListener('pointerdown', ensureAudio);
+
+/* ================= genie ================= */
+const genie = $('#genieSvg'), stage = $('#stage'), bubble = $('#bubble'), bubbleText = $('#bubbleText');
+let typeTimer = null, hideTimer = null;
+function genieSay(text, hold = 3800){
+  bubble.classList.add('show');
+  bubbleText.textContent = '';
+  clearInterval(typeTimer); clearTimeout(hideTimer);
+  let i = 0;
+  typeTimer = setInterval(() => {
+    i++; bubbleText.textContent = text.slice(0, i);
+    if(i >= text.length){
+      clearInterval(typeTimer);
+      hideTimer = setTimeout(() => bubble.classList.remove('show'), hold);
+    }
+  }, 26);
+}
+function setGenie(mode){
+  genie.classList.remove('joyful','laughing');
+  if(mode) genie.classList.add(mode);
+}
+function spawnHa(){
+  const layer = $('#haLayer');
+  for(let i = 0; i < 3; i++){
+    const s = document.createElement('span');
+    s.className = 'ha'; s.textContent = 'ha!';
+    s.style.left = (44 + Math.random()*24) + '%';
+    s.style.top  = (16 + Math.random()*16) + '%';
+    s.style.animationDelay = (i*170) + 'ms';
+    layer.appendChild(s);
+    setTimeout(() => s.remove(), 1500);
+  }
+}
+
+/* ================= canvases: night sky + magic particles ================= */
+const bgC = $('#bg'), fxC = $('#fx'), bgx = bgC.getContext('2d'), fxx = fxC.getContext('2d');
+let W = 0, H = 0, stars = [], meteors = [], parts = [], nextMeteor = performance.now() + 5000;
+
+function resize(){
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  [bgC, fxC].forEach(c => { c.width = W*DPR; c.height = H*DPR; c.style.width = W+'px'; c.style.height = H+'px'; });
+  bgx.setTransform(DPR,0,0,DPR,0,0); fxx.setTransform(DPR,0,0,DPR,0,0);
+  const n = Math.round(W*H/9000);
+  stars = Array.from({length:n}, () => ({
+    x:Math.random()*W, y:Math.random()*H, r:.4+Math.random()*1.2,
+    ph:Math.random()*6.28, sp:.4+Math.random()*1.2, warm:Math.random() < .5
+  }));
+}
+addEventListener('resize', resize); resize();
+
+function drawBg(t, dt){
+  bgx.clearRect(0,0,W,H);
+  for(const s of stars){
+    bgx.globalAlpha = .22 + .5*(.5 + .5*Math.sin(t/1000*s.sp + s.ph));
+    bgx.fillStyle = s.warm ? '#ffe9bd' : '#dfe9ff';
+    bgx.beginPath(); bgx.arc(s.x, s.y, s.r, 0, 6.28); bgx.fill();
+  }
+  bgx.globalAlpha = 1;
+  if(t > nextMeteor){
+    nextMeteor = t + 7000 + Math.random()*9000;
+    const dir = Math.random() < .5 ? -1 : 1;
+    meteors.push({ x:W*(.2+Math.random()*.6), y:H*.04, vx:dir*(360+Math.random()*180), vy:250+Math.random()*130, life:1 });
+  }
+  for(let i = meteors.length-1; i >= 0; i--){
+    const m = meteors[i];
+    m.x += m.vx*dt; m.y += m.vy*dt; m.life -= dt*.85;
+    if(m.life <= 0){ meteors.splice(i,1); continue; }
+    const g = bgx.createLinearGradient(m.x, m.y, m.x - m.vx*.13, m.y - m.vy*.13);
+    g.addColorStop(0, 'rgba(255,240,200,'+(.9*m.life)+')'); g.addColorStop(1, 'rgba(255,240,200,0)');
+    bgx.strokeStyle = g; bgx.lineWidth = 1.6;
+    bgx.beginPath(); bgx.moveTo(m.x, m.y); bgx.lineTo(m.x - m.vx*.13, m.y - m.vy*.13); bgx.stroke();
+  }
+}
+function drawSpark(c, r){
+  c.beginPath();
+  c.moveTo(0,-r);
+  c.quadraticCurveTo( r*.2,-r*.2,  r,0);
+  c.quadraticCurveTo( r*.2, r*.2,  0,r);
+  c.quadraticCurveTo(-r*.2, r*.2, -r,0);
+  c.quadraticCurveTo(-r*.2,-r*.2,  0,-r);
+  c.fill();
+}
+function drawHeart(c, s){
+  c.beginPath();
+  c.moveTo(0, s*.9);
+  c.bezierCurveTo(-s*1.15, s*.15, -s*.72, -s*.85, 0, -s*.25);
+  c.bezierCurveTo( s*.72, -s*.85,  s*1.15,  s*.15, 0, s*.9);
+  c.fill();
+}
+function spawnPart(p){
+  parts.push(Object.assign({ life:1, decay:1, vx:0, vy:0, g:0, size:6, rot:Math.random()*6.28,
+    vr:(Math.random()-.5)*5, color:'#eec27a', type:'star', sway:Math.random()*6.28 }, p));
+}
+function burst(x, y, o = {}){
+  const n = o.count || 42;
+  for(let i = 0; i < n; i++){
+    const a = Math.random()*6.28, sp = (o.speed||190)*(.35+Math.random());
+    spawnPart({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - (o.lift||60), g:260,
+      decay:.9+Math.random()*.7, size:(o.size||7)*(.5+Math.random()),
+      type:o.types ? o.types[(Math.random()*o.types.length)|0] : 'star',
+      color:o.colors ? o.colors[(Math.random()*o.colors.length)|0] : '#eec27a' });
+  }
+}
+function rain(o){
+  for(let i = 0; i < o.count; i++){
+    spawnPart({ x:Math.random()*W, y:-20-Math.random()*H*.3, vx:(Math.random()-.5)*30,
+      vy:o.v||130+Math.random()*90, g:26, decay:.2+Math.random()*.1, size:o.size||8,
+      type:o.type, color:o.colors[(Math.random()*o.colors.length)|0] });
+  }
+}
+function heartsRise(){
+  for(let i = 0; i < 26; i++){
+    spawnPart({ x:Math.random()*W, y:H+20, vx:(Math.random()-.5)*24, vy:-(70+Math.random()*80), g:-10,
+      decay:.28+Math.random()*.14, size:5+Math.random()*6, type:'heart',
+      color:Math.random() < .5 ? '#f0a8b8' : '#eec27a' });
+  }
+}
+function confettiRain(){
+  rain({ count:66, type:'ribbon', v:180, colors:['#eec27a','#f0a8b8','#8fd8cb','#fff3d6'] });
+  rain({ count:28, type:'star',   v:150, colors:['#ffe9b0','#eec27a'] });
+}
+function petalsRain(){
+  rain({ count:36, type:'petal', v:70, size:7, colors:['#f0a8b8','#e58aa0','#f7c6d0'] });
+}
+function drawFx(t, dt){
+  fxx.clearRect(0,0,W,H);
+  for(let i = parts.length-1; i >= 0; i--){
+    const p = parts[i];
+    p.life -= p.decay*dt;
+    if(p.life <= 0){ parts.splice(i,1); continue; }
+    p.vy += p.g*dt;
+    p.x += p.vx*dt + (p.type === 'petal' ? Math.sin(t/300 + p.sway)*26*dt : 0);
+    p.y += p.vy*dt;
+    p.rot += p.vr*dt;
+    fxx.save();
+    fxx.translate(p.x, p.y); fxx.rotate(p.rot);
+    fxx.globalAlpha = Math.min(1, p.life*1.7);
+    fxx.fillStyle = p.color;
+    if(p.type === 'star') drawSpark(fxx, p.size);
+    else if(p.type === 'dot'){ fxx.beginPath(); fxx.arc(0,0,p.size*.38,0,6.28); fxx.fill(); }
+    else if(p.type === 'ribbon') fxx.fillRect(-p.size*.5, -p.size*.2, p.size, p.size*.4);
+    else if(p.type === 'petal'){ fxx.beginPath(); fxx.ellipse(0,0,p.size,p.size*.55,0,0,6.28); fxx.fill(); }
+    else if(p.type === 'heart') drawHeart(fxx, p.size);
+    fxx.restore();
+  }
+}
+let prevT = performance.now();
+function loop(t){
+  const dt = Math.min(.05, (t - prevT)/1000); prevT = t;
+  drawBg(t, dt); drawFx(t, dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function burstAtLamp(){
+  const lr = $('#lamp').getBoundingClientRect();
+  burst(lr.left + lr.width/2, lr.top + lr.height*.3, { count:56, speed:240,
+    types:['star','dot'], colors:['#ffe9b0','#eec27a','#fff6df','#8fd8cb'] });
+  const hr = $('#genieFloat').getBoundingClientRect();
+  burst(hr.left + hr.width/2, hr.top + hr.height*.18, { count:28, speed:150,
+    types:['star'], colors:['#ffe9b0','#eec27a'] });
+}
+function smallBurst(e){
+  burst(e.clientX || W/2, e.clientY || H/2, { count:16, speed:130, size:5,
+    types:['star','dot'], colors:['#ffe9b0','#eec27a'] });
+}
+
+/* ================= screens & counters ================= */
+function showScreen(id){
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+  stage.classList.toggle('compact', id !== 'sec-menu');
+  window.scrollTo({ top:0 });
+}
+function pipSVG(on){
+  return '<svg viewBox="0 0 24 24" class="'+(on?'on':'')+'"><path d="M12 2.5l2.6 6.9 6.9 2.6-6.9 2.6L12 21.5l-2.6-6.9-6.9-2.6 6.9-2.6Z"/></svg>';
+}
+function updatePips(){
+  const left = 3 - grantedCount();
+  const label = left === 0 ? 'All wishes granted' : left + (left === 1 ? ' wish left' : ' wishes left');
+  const pips = ['birthday','wedding','baby'].map(k => pipSVG(S.granted[k])).join('');
+  $$('[data-wishpips]').forEach(el => el.innerHTML = pips);
+  $$('[data-wishlabel]').forEach(el => el.textContent = label);
+}
+function refreshRows(){
+  $$('.wish').forEach(row => {
+    const k = row.dataset.wish, on = S.granted[k];
+    row.classList.toggle('granted', on);
+    row.querySelector('.num').innerHTML = on ? ICON.check : META[k].n;
+    row.querySelector('.wsub').textContent = on ? META[k].mem : row.querySelector('.wsub').dataset.def;
+    row.querySelector('.wstate').innerHTML = on ? '<span class="okring">'+ICON.check+'</span>' : ICON.chev;
+  });
+  $('#menuFoot').textContent = grantedCount() === 3
+    ? 'All three are granted now. They live here as memories.'
+    : 'Only three wishes. Bijoo counts every one.';
+}
+ $$('.wsub').forEach(el => el.dataset.def = el.textContent);
+ $$('.wish').forEach(row => {
+  row.querySelector('.wstate').innerHTML = ICON.chev;
+});
+
+/* ================= the grant ritual ================= */
+function doGrant(key, data){
+  S.granted[key] = true; S.data[key] = data; save();   // strict: saved the moment it is granted
+  refreshRows(); updatePips();
+  playChime();
+  genie.classList.add('casting');
+  setGenie('laughing'); spawnHa();
+  genieSay('Ha ha ha! Your wish is granted!');
+  setTimeout(burstAtLamp, 200);
+  const stamp = $('#stamp');
+  stamp.classList.add('show');
+  setTimeout(() => {
+    stamp.classList.remove('show');
+    genie.classList.remove('casting');
+    setGenie('joyful');
+  }, 1600);
+  setTimeout(() => {
+    renderResult(key, false);
+    showScreen('sec-result');
+    if(key === 'birthday') setTimeout(confettiRain, 150);
+    if(key === 'wedding')  setTimeout(petalsRain, 150);
+    if(key === 'baby')     setTimeout(heartsRise, 150);
+  }, 1500);
+  setTimeout(() => setGenie('idle'), 3600);
+}
+
+/* ================= wish tap routing ================= */
+ $$('.wish').forEach(row => {
+  row.addEventListener('click', e => {
+    ensureAudio(); smallBurst(e);
+    const k = row.dataset.wish;
+    if(S.granted[k]){                             // memory mode: no new wish is spent
+      renderResult(k, true);
+      showScreen('sec-result');
+      genieSay('A memory, kept safe for you…');
+      return;
+    }
+    if(k === 'birthday'){ doGrant('birthday', {}); }
+    if(k === 'wedding'){ showScreen('sec-wedding'); setWedStep('wstep1'); genieSay('The registry of hearts — fill it with care…'); }
+    if(k === 'baby'){ showScreen('sec-baby'); genieSay('A little star is coming — tell me about them…'); }
+  });
+});
+ $$('[data-back]').forEach(b => b.addEventListener('click', () => {
+  showScreen('sec-menu'); setGenie('idle'); refreshRows();
+  genieSay(grantedCount() === 3
+    ? 'Every wish is granted. Cherish them forever…'
+    : 'Choose your next wish, dear…');
+}));
+
+/* ================= wedding flow ================= */
+const wName = $('#wName'), wBf = $('#wBf'), wPlace = $('#wPlace'), toVow = $('#toVow');
+function checkField(input){
+  const ok = input.value.trim().length > 0;
+  input.closest('.fwrap').classList.toggle('ok', ok);
+  input.closest('.field').classList.remove('err');
+  return ok;
+}
+[wName, wBf, wPlace].forEach(inp => inp.addEventListener('input', () => {
+  const all = [wName, wBf, wPlace].every(checkField);
+  toVow.disabled = !all;
+}));
+function setWedStep(id){
+  $$('#sec-wedding .wstep').forEach(s => s.classList.toggle('active', s.id === id));
+}
+toVow.addEventListener('click', () => {
+  const ok = [wName, wBf, wPlace].map(i => { const v = i.value.trim().length > 0; i.closest('.field').classList.toggle('err', !v); return v; });
+  if(ok.includes(false)) return;
+  $('#vowBf').textContent = wBf.value.trim();
+  $('#vowWitness').textContent = 'To be sealed at ' + wPlace.value.trim() + ' \u00B7 witnessed by Bijoo';
+  setWedStep('wstep2');
+  genieSay('Cross your heart now, dear…');
+});
+ $('#editBtn').addEventListener('click', () => setWedStep('wstep1'));
+const vowCheck = $('#vowCheck'), sealBtn = $('#sealBtn');
+function toggleVow(){
+  vowCheck.classList.toggle('checked');
+  vowCheck.setAttribute('aria-checked', vowCheck.classList.contains('checked'));
+  sealBtn.disabled = !vowCheck.classList.contains('checked');
+  if(!sealBtn.disabled) playChime();
+}
+vowCheck.addEventListener('click', toggleVow);
+vowCheck.addEventListener('keydown', e => { if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); toggleVow(); } });
+sealBtn.addEventListener('click', () => {
+  doGrant('wedding', { name:wName.value.trim(), bf:wBf.value.trim(), place:wPlace.value.trim() });
+});
+
+/* ================= baby flow ================= */
+let selGender = null, babyCount = 1;
+const bName = $('#bName'), loveBtn = $('#loveBtn'), bCountEl = $('#bCount');
+ $$('.chip').forEach(ch => ch.addEventListener('click', e => {
+  ensureAudio(); smallBurst(e);
+  $$('.chip').forEach(c => c.classList.remove('sel'));
+  ch.classList.add('sel');
+  selGender = ch.dataset.g;
+  loveBtn.disabled = !(selGender && bName.value.trim());
+}));
+bName.addEventListener('input', () => {
+  const ok = bName.value.trim().length > 0;
+  bName.closest('.fwrap').classList.toggle('ok', ok);
+  bName.closest('.field').classList.remove('err');
+  loveBtn.disabled = !(selGender && ok);
+});
+ $('#bMinus').addEventListener('click', () => { babyCount = Math.max(1, babyCount-1); bCountEl.textContent = babyCount; $('#bMinus').disabled = babyCount === 1; $('#bPlus').disabled = false; });
+ $('#bPlus').addEventListener('click', () => { babyCount = Math.min(5, babyCount+1); bCountEl.textContent = babyCount; $('#bPlus').disabled = babyCount === 5; $('#bMinus').disabled = false; });
+
+let loadRAF = null;
+loveBtn.addEventListener('click', () => {
+  if(!selGender || !bName.value.trim()) return;
+  showScreen('sec-baby-loading');
+  setGenie('joyful');
+  genieSay('Love takes a moment to brew…');
+  $('#loadSummary').textContent =
+    (selGender === 'girl' ? 'Baby girl' : 'Baby boy') + ' \u00B7 named ' + bName.value.trim() +
+    ' \u00B7 ' + (babyCount === 1 ? 'one little star' : babyCount + ' little stars') + ' on the way';
+  startLoading();
+});
+function startLoading(){
+  const start = performance.now(), dur = 3000;
+  const liquid = $('#liquid'), pct = $('#pct'), status = $('#loadStatus');
+  const steps = [[0,'Gathering stardust…'],[.35,'Stitching tiny dreams…'],[.7,'Warming little hearts…']];
+  function step(t){
+    const p = Math.min(1, (t - start)/dur);
+    liquid.setAttribute('transform', 'translate(0 ' + (78*(1-p)).toFixed(1) + ')');
+    pct.textContent = Math.round(p*100) + '%';
+    for(let i = steps.length-1; i >= 0; i--){ if(p >= steps[i][0]){ status.textContent = steps[i][1]; break; } }
+    if(p < 1){ loadRAF = requestAnimationFrame(step); }
+    else {
+      setTimeout(() => {
+        setGenie('idle');
+        doGrant('baby', { gender:selGender, name:bName.value.trim(), count:babyCount });
+      }, 260);
+    }
+  }
+  loadRAF = requestAnimationFrame(step);
+}
+
+/* ================= result rendering ================= */
+const resImg = $('#resImg');
+resImg.addEventListener('load', () => resImg.classList.add('loaded'));
+resImg.addEventListener('error', () => resImg.closest('.ph-wrap').classList.add('failed'));
+function renderResult(key, memory){
+  const d = S.data[key] || {};
+  $('#resTag').textContent = META[key].tag + (memory ? ' \u00B7 A MEMORY' : ' \u00B7 GRANTED');
+  resImg.classList.remove('loaded');
+  resImg.closest('.ph-wrap').classList.remove('failed');
+  const msg = $('#resMsg'), sub = $('#resSub');
+  if(key === 'birthday'){
+    resImg.src = PHOTOS.birthday;
+    msg.textContent = 'Have a nice birthday with Bijoo';
+    sub.textContent = 'Blow the candles before they drift away \u2014 Bijoo saved you the biggest slice.';
+  } else if(key === 'wedding'){
+    resImg.src = PHOTOS.wedding;
+    msg.innerHTML = 'You are now married to <em>' + esc(d.bf || '') + '</em>. Have a happy life.';
+    sub.textContent = 'Sealed at ' + (d.place || 'a secret place') + ' \u00B7 witnessed by Bijoo' + (d.name ? ' \u00B7 Mrs ' + d.name : '');
+  } else {
+    resImg.src = 'm3.jpeg' + (d.gender === 'boy' ? 'boy' : 'girl') + 'm3.jpeg';
+    msg.textContent = 'Congratulations, you are a mother now';
+    const n = d.count || 1;
+    sub.textContent = 'Welcome little ' + cap(d.name || 'star') +
+      (n > 1 ? ' \u2014 plus ' + (n-1) + ' more little ' + (d.gender === 'boy' ? 'boys' : 'girls') + '!' : '!');
+  }
+  updatePips();
+}
+/* ================= first light ================= */
+refreshRows(); updatePips(); showScreen('sec-menu');
+genieSay(grantedCount() === 0
+  ? 'Hello, dear one\u2026 I am Bijoo. Three wishes \u2014 spend them with your heart.'
+  : grantedCount() === 3
+    ? 'All three wishes are granted. Tap them whenever you miss the magic\u2026'
+    : 'Welcome back\u2026 your granted wishes are safe with me.');
+</script>
+</body>
+</html>
